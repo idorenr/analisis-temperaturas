@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Análisis de Temperaturas - V Región</title>
+    <title>DIMER - Análisis de Temperaturas V Región</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@babel/standalone/babel.min.js"></script>
@@ -74,13 +74,18 @@
             const [dateRange, setDateRange] = useState({ start: '', end: '', label: '' });
             const [selectedProvince, setSelectedProvince] = useState('Todas');
 
-            const provincias = ['Todas', 'Valparaíso', 'San Antonio', 'Quillota', 'Los Andes', 'San Felipe', 'Petorca'];
+            const provincias = ['Todas', 'DIMER', 'Otras', 'Valparaíso', 'San Antonio', 'Quillota', 'Los Andes', 'San Felipe', 'Petorca'];
+            
+            // Comunas que atiende DIMER
+            const COMUNAS_DIMER = ['Viña del Mar', 'Valparaíso', 'Quilpué', 'Villa Alemana', 'Olmué', 'Limache'];
             
             const getComunaProvince = (comunaNombre) => {
+                if (COMUNAS_DIMER.includes(comunaNombre)) return 'DIMER';
+                
                 const provinceMap = {
-                    'Valparaíso': ['Valparaíso', 'Viña del Mar', 'Quilpué', 'Villa Alemana', 'Concón', 'Quintero', 'Puchuncaví', 'Casablanca'],
+                    'Valparaíso': ['Concón', 'Quintero', 'Puchuncaví', 'Casablanca'],
                     'San Antonio': ['San Antonio', 'Cartagena', 'El Tabo', 'El Quisco', 'Algarrobo', 'Santo Domingo'],
-                    'Quillota': ['Quillota', 'La Calera', 'La Cruz', 'Nogales', 'Hijuelas', 'Limache', 'Olmué'],
+                    'Quillota': ['Quillota', 'La Calera', 'La Cruz', 'Nogales', 'Hijuelas'],
                     'Los Andes': ['Los Andes', 'San Esteban', 'Calle Larga', 'Rinconada'],
                     'San Felipe': ['San Felipe', 'Putaendo', 'Santa María', 'Panquehue', 'Llaillay', 'Catemu'],
                     'Petorca': ['La Ligua', 'Cabildo', 'Papudo', 'Zapallar', 'Petorca']
@@ -94,7 +99,82 @@
 
             const filteredData = selectedProvince === 'Todas' 
                 ? data 
+                : selectedProvince === 'DIMER'
+                ? data.filter(row => COMUNAS_DIMER.includes(row.comuna))
+                : selectedProvince === 'Otras'
+                ? data.filter(row => !COMUNAS_DIMER.includes(row.comuna))
                 : data.filter(row => getComunaProvince(row.comuna) === selectedProvince);
+
+            // Calcular promedios para grupos de comunas
+            const calculateGroupAverage = (comunas) => {
+                if (comunas.length === 0) return null;
+                
+                const sumActual = {
+                    max: comunas.reduce((sum, c) => sum + c.actual.max, 0),
+                    min: comunas.reduce((sum, c) => sum + c.actual.min, 0),
+                    mean: comunas.reduce((sum, c) => sum + c.actual.mean, 0)
+                };
+                
+                const sumAnterior = {
+                    max: comunas.reduce((sum, c) => sum + c.anterior.max, 0),
+                    min: comunas.reduce((sum, c) => sum + c.anterior.min, 0),
+                    mean: comunas.reduce((sum, c) => sum + c.anterior.mean, 0)
+                };
+                
+                const count = comunas.length;
+                
+                const avgActual = {
+                    max: Math.round((sumActual.max / count) * 10) / 10,
+                    min: Math.round((sumActual.min / count) * 10) / 10,
+                    mean: Math.round((sumActual.mean / count) * 10) / 10
+                };
+                
+                const avgAnterior = {
+                    max: Math.round((sumAnterior.max / count) * 10) / 10,
+                    min: Math.round((sumAnterior.min / count) * 10) / 10,
+                    mean: Math.round((sumAnterior.mean / count) * 10) / 10
+                };
+                
+                const calcPercentage = (val2025, val2024) => {
+                    if (val2024 === 0) return 0;
+                    return Math.round(((val2025 - val2024) / val2024) * 100 * 10) / 10;
+                };
+                
+                return {
+                    actual: avgActual,
+                    anterior: avgAnterior,
+                    variacion: {
+                        max: {
+                            abs: Math.round((avgActual.max - avgAnterior.max) * 10) / 10,
+                            pct: calcPercentage(avgActual.max, avgAnterior.max)
+                        },
+                        min: {
+                            abs: Math.round((avgActual.min - avgAnterior.min) * 10) / 10,
+                            pct: calcPercentage(avgActual.min, avgAnterior.min)
+                        },
+                        mean: {
+                            abs: Math.round((avgActual.mean - avgAnterior.mean) * 10) / 10,
+                            pct: calcPercentage(avgActual.mean, avgAnterior.mean)
+                        }
+                    }
+                };
+            };
+
+            // Organizar datos: comunas DIMER primero, luego otras
+            const organizedData = [...data].sort((a, b) => {
+                const aIsDimer = COMUNAS_DIMER.includes(a.comuna);
+                const bIsDimer = COMUNAS_DIMER.includes(b.comuna);
+                
+                if (aIsDimer && !bIsDimer) return -1;
+                if (!aIsDimer && bIsDimer) return 1;
+                
+                // Dentro de DIMER, mantener el orden original
+                if (aIsDimer && bIsDimer) {
+                    return COMUNAS_DIMER.indexOf(a.comuna) - COMUNAS_DIMER.indexOf(b.comuna);
+                }
+                
+                return a.comuna.localeCompare(b.comuna);
+            });
 
             // Función para obtener las fechas dinámicas
             const getDateRanges = () => {
@@ -297,13 +377,27 @@
                         {/* Header */}
                         <div className="bg-white rounded-lg shadow-xl p-6 mb-6">
                             <div className="flex items-center justify-between flex-wrap gap-4">
-                                <div>
-                                    <h1 className="text-3xl font-bold text-gray-800 mb-2 flex items-center gap-2">
-                                        🍦 Análisis de Temperaturas - V Región
-                                    </h1>
-                                    <p className="text-gray-600">
-                                        Comparación: {dateRange.label || 'Cargando...'}
-                                    </p>
+                                <div className="flex items-center gap-4">
+                                    <img 
+                                        src="DIMER_logo_sin_bajada_alta_resolucion.png" 
+                                        alt="DIMER Logo" 
+                                        className="h-16 w-auto"
+                                        onError={(e) => {
+                                            e.target.style.display = 'none';
+                                            e.target.nextSibling.style.display = 'block';
+                                        }}
+                                    />
+                                    <div style={{display: 'none'}} className="text-4xl font-bold text-gray-800">
+                                        🍦 DIMER
+                                    </div>
+                                    <div>
+                                        <h1 className="text-2xl font-bold text-gray-800 mb-1">
+                                            Análisis de Temperaturas - V Región
+                                        </h1>
+                                        <p className="text-gray-600">
+                                            Comparación: {dateRange.label || 'Cargando...'}
+                                        </p>
+                                    </div>
                                 </div>
                                 <button
                                     onClick={fetchAllData}
@@ -341,48 +435,80 @@
 
                         {/* Insights Card */}
                         <div className="bg-gradient-to-r from-orange-100 to-yellow-100 rounded-lg shadow-lg p-6 mb-6">
-                            <h2 className="text-xl font-bold text-gray-800 mb-3">💡 Insights para tu negocio</h2>
-                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
-                                <div className="bg-white rounded-lg p-4">
-                                    <div className="text-2xl font-bold text-purple-600">
-                                        {data.length}
+                            <h2 className="text-xl font-bold text-gray-800 mb-3">💡 Insights DIMER</h2>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                {/* Métricas DIMER */}
+                                <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg p-4 border-2 border-blue-300">
+                                    <h3 className="font-bold text-blue-800 mb-3 text-lg">🏢 Comunas DIMER (6)</h3>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div className="bg-white rounded p-2">
+                                            <div className="text-lg font-bold text-orange-600">
+                                                {data.filter(d => COMUNAS_DIMER.includes(d.comuna) && d.variacion.mean.abs > 0).length}
+                                            </div>
+                                            <div className="text-xs text-gray-600">Más cálidas 🔥</div>
+                                        </div>
+                                        <div className="bg-white rounded p-2">
+                                            <div className="text-lg font-bold text-blue-600">
+                                                {data.filter(d => COMUNAS_DIMER.includes(d.comuna) && d.variacion.mean.abs < 0).length}
+                                            </div>
+                                            <div className="text-xs text-gray-600">Más frías ❄️</div>
+                                        </div>
+                                        <div className="bg-white rounded p-2 col-span-2">
+                                            <div className="text-lg font-bold text-green-600">
+                                                {data.filter(d => COMUNAS_DIMER.includes(d.comuna)).length > 0 ? 
+                                                    data.filter(d => COMUNAS_DIMER.includes(d.comuna)).reduce((max, d) => d.actual.mean > max ? d.actual.mean : max, 0) + '°C'
+                                                    : '0°C'
+                                                }
+                                            </div>
+                                            <div className="text-xs text-gray-600">Mayor promedio DIMER</div>
+                                        </div>
                                     </div>
-                                    <div className="text-sm text-gray-600">Comunas analizadas</div>
                                 </div>
-                                <div className="bg-white rounded-lg p-4">
-                                    <div className="text-2xl font-bold text-orange-600">
-                                        {data.filter(d => d.variacion.mean.abs > 0).length}
+                                
+                                {/* Métricas Otras */}
+                                <div className="bg-gray-50 rounded-lg p-4 border-2 border-gray-300">
+                                    <h3 className="font-bold text-gray-800 mb-3 text-lg">🌍 Otras Comunas (32)</h3>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div className="bg-white rounded p-2">
+                                            <div className="text-lg font-bold text-orange-600">
+                                                {data.filter(d => !COMUNAS_DIMER.includes(d.comuna) && d.variacion.mean.abs > 0).length}
+                                            </div>
+                                            <div className="text-xs text-gray-600">Más cálidas 🔥</div>
+                                        </div>
+                                        <div className="bg-white rounded p-2">
+                                            <div className="text-lg font-bold text-blue-600">
+                                                {data.filter(d => !COMUNAS_DIMER.includes(d.comuna) && d.variacion.mean.abs < 0).length}
+                                            </div>
+                                            <div className="text-xs text-gray-600">Más frías ❄️</div>
+                                        </div>
+                                        <div className="bg-white rounded p-2 col-span-2">
+                                            <div className="text-lg font-bold text-green-600">
+                                                {data.filter(d => !COMUNAS_DIMER.includes(d.comuna)).length > 0 ? 
+                                                    data.filter(d => !COMUNAS_DIMER.includes(d.comuna)).reduce((max, d) => d.actual.mean > max ? d.actual.mean : max, 0) + '°C'
+                                                    : '0°C'
+                                                }
+                                            </div>
+                                            <div className="text-xs text-gray-600">Mayor promedio otras</div>
+                                        </div>
                                     </div>
-                                    <div className="text-sm text-gray-600">Más cálidas que 2024 🔥</div>
-                                </div>
-                                <div className="bg-white rounded-lg p-4">
-                                    <div className="text-2xl font-bold text-blue-600">
-                                        {data.filter(d => d.variacion.mean.abs < 0).length}
-                                    </div>
-                                    <div className="text-sm text-gray-600">Más frías que 2024 ❄️</div>
-                                </div>
-                                <div className="bg-white rounded-lg p-4">
-                                    <div className="text-2xl font-bold text-green-600">
-                                        {data.length > 0 ? 
-                                            data.reduce((max, d) => d.actual.max > max ? d.actual.max : max, 0) + '°C'
-                                            : '0°C'
-                                        }
-                                    </div>
-                                    <div className="text-sm text-gray-600">Mayor promedio de máximas</div>
                                 </div>
                             </div>
                             
                             {/* Top 5 Comunas más cálidas */}
                             {data.length > 0 && (
                                 <div className="bg-white rounded-lg p-4">
-                                    <h3 className="font-semibold text-gray-800 mb-2">🌡️ Top 5 Comunas más cálidas (promedio):</h3>
+                                    <h3 className="font-semibold text-gray-800 mb-2">🌡️ Top 5 Comunas más cálidas (temperatura promedio):</h3>
                                     <div className="flex flex-wrap gap-2">
                                         {[...data]
                                             .sort((a, b) => b.actual.mean - a.actual.mean)
                                             .slice(0, 5)
                                             .map((d, i) => (
-                                                <span key={i} className="bg-orange-100 text-orange-800 px-3 py-1 rounded-full text-sm font-medium">
-                                                    {i + 1}. {d.comuna} ({d.actual.mean}°C)
+                                                <span key={i} className={`px-3 py-1 rounded-full text-sm font-medium ${
+                                                    COMUNAS_DIMER.includes(d.comuna) 
+                                                        ? 'bg-blue-100 text-blue-800 border-2 border-blue-400' 
+                                                        : 'bg-orange-100 text-orange-800'
+                                                }`}>
+                                                    {i + 1}. {d.comuna} ({d.actual.mean}°C) {COMUNAS_DIMER.includes(d.comuna) ? '🏢' : ''}
                                                 </span>
                                             ))
                                         }
@@ -418,62 +544,335 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {filteredData.map((row, index) => (
-                                            <tr 
-                                                key={index}
-                                                className={`border-b border-gray-200 hover:bg-gray-50 transition-colors ${getVariationBg(row.variacion.mean.abs)}`}
-                                            >
-                                                <td className="px-4 py-4 font-semibold text-gray-800">
-                                                    <div>{row.comuna}</div>
-                                                    <div className="text-xs text-gray-500 font-normal">
-                                                        {getComunaProvince(row.comuna)}
-                                                    </div>
-                                                </td>
-                                                
-                                                {/* Temperatura Máxima */}
-                                                <td className="px-4 py-4 text-center">
-                                                    <div className="font-semibold text-red-600">{row.actual.max}°</div>
-                                                    <div className="text-xs text-gray-500">{row.anterior.max}°</div>
-                                                </td>
-                                                <td className={`px-4 py-4 text-center ${getVariationColor(row.variacion.max.abs)}`}>
-                                                    <div className="font-bold">
-                                                        {row.variacion.max.abs > 0 ? '+' : ''}{row.variacion.max.abs}°
-                                                    </div>
-                                                    <div className="text-xs">
-                                                        ({row.variacion.max.pct > 0 ? '+' : ''}{row.variacion.max.pct}%)
-                                                    </div>
-                                                </td>
-                                                
-                                                {/* Temperatura Mínima */}
-                                                <td className="px-4 py-4 text-center">
-                                                    <div className="font-semibold text-blue-600">{row.actual.min}°</div>
-                                                    <div className="text-xs text-gray-500">{row.anterior.min}°</div>
-                                                </td>
-                                                <td className={`px-4 py-4 text-center ${getVariationColor(row.variacion.min.abs)}`}>
-                                                    <div className="font-bold">
-                                                        {row.variacion.min.abs > 0 ? '+' : ''}{row.variacion.min.abs}°
-                                                    </div>
-                                                    <div className="text-xs">
-                                                        ({row.variacion.min.pct > 0 ? '+' : ''}{row.variacion.min.pct}%)
-                                                    </div>
-                                                </td>
-                                                
-                                                {/* Temperatura Promedio */}
-                                                <td className="px-4 py-4 text-center">
-                                                    <div className="font-semibold text-gray-800">{row.actual.mean}°</div>
-                                                    <div className="text-xs text-gray-500">{row.anterior.mean}°</div>
-                                                </td>
-                                                <td className={`px-4 py-4 text-center ${getVariationColor(row.variacion.mean.abs)}`}>
-                                                    <div className="font-bold">
-                                                        {row.variacion.mean.abs > 0 ? '+' : ''}{row.variacion.mean.abs}°
-                                                        {row.variacion.mean.abs > 0 ? ' 🔥' : row.variacion.mean.abs < 0 ? ' ❄️' : ' ➡️'}
-                                                    </div>
-                                                    <div className="text-xs">
-                                                        ({row.variacion.mean.pct > 0 ? '+' : ''}{row.variacion.mean.pct}%)
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ))}
+                                        {/* Comunas DIMER */}
+                                        {(selectedProvince === 'Todas' || selectedProvince === 'DIMER') && (
+                                            <>
+                                                <tr className="bg-gradient-to-r from-blue-100 to-orange-100">
+                                                    <td colSpan="7" className="px-4 py-3 font-bold text-gray-800 text-lg">
+                                                        🏢 COMUNAS DIMER
+                                                    </td>
+                                                </tr>
+                                                {organizedData
+                                                    .filter(row => COMUNAS_DIMER.includes(row.comuna))
+                                                    .map((row, index) => (
+                                                        <tr 
+                                                            key={`dimer-${index}`}
+                                                            className={`border-b border-gray-200 hover:bg-gray-50 transition-colors ${getVariationBg(row.variacion.mean.abs)}`}
+                                                        >
+                                                            <td className="px-4 py-4 font-semibold text-gray-800">
+                                                                <div>{row.comuna}</div>
+                                                                <div className="text-xs text-blue-600 font-normal">
+                                                                    DIMER
+                                                                </div>
+                                                            </td>
+                                                            
+                                                            {/* Temperatura Máxima */}
+                                                            <td className="px-4 py-4 text-center">
+                                                                <div className="font-semibold text-red-600">{row.actual.max}°</div>
+                                                                <div className="text-xs text-gray-500">{row.anterior.max}°</div>
+                                                            </td>
+                                                            <td className={`px-4 py-4 text-center ${getVariationColor(row.variacion.max.abs)}`}>
+                                                                <div className="font-bold">
+                                                                    {row.variacion.max.abs > 0 ? '+' : ''}{row.variacion.max.abs}°
+                                                                </div>
+                                                                <div className="text-xs">
+                                                                    ({row.variacion.max.pct > 0 ? '+' : ''}{row.variacion.max.pct}%)
+                                                                </div>
+                                                            </td>
+                                                            
+                                                            {/* Temperatura Mínima */}
+                                                            <td className="px-4 py-4 text-center">
+                                                                <div className="font-semibold text-blue-600">{row.actual.min}°</div>
+                                                                <div className="text-xs text-gray-500">{row.anterior.min}°</div>
+                                                            </td>
+                                                            <td className={`px-4 py-4 text-center ${getVariationColor(row.variacion.min.abs)}`}>
+                                                                <div className="font-bold">
+                                                                    {row.variacion.min.abs > 0 ? '+' : ''}{row.variacion.min.abs}°
+                                                                </div>
+                                                                <div className="text-xs">
+                                                                    ({row.variacion.min.pct > 0 ? '+' : ''}{row.variacion.min.pct}%)
+                                                                </div>
+                                                            </td>
+                                                            
+                                                            {/* Temperatura Promedio */}
+                                                            <td className="px-4 py-4 text-center">
+                                                                <div className="font-semibold text-gray-800">{row.actual.mean}°</div>
+                                                                <div className="text-xs text-gray-500">{row.anterior.mean}°</div>
+                                                            </td>
+                                                            <td className={`px-4 py-4 text-center ${getVariationColor(row.variacion.mean.abs)}`}>
+                                                                <div className="font-bold">
+                                                                    {row.variacion.mean.abs > 0 ? '+' : ''}{row.variacion.mean.abs}°
+                                                                    {row.variacion.mean.abs > 0 ? ' 🔥' : row.variacion.mean.abs < 0 ? ' ❄️' : ' ➡️'}
+                                                                </div>
+                                                                <div className="text-xs">
+                                                                    ({row.variacion.mean.pct > 0 ? '+' : ''}{row.variacion.mean.pct}%)
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    ))
+                                                }
+                                                {/* Subtotal DIMER */}
+                                                {(() => {
+                                                    const dimerData = data.filter(row => COMUNAS_DIMER.includes(row.comuna));
+                                                    const avg = calculateGroupAverage(dimerData);
+                                                    if (!avg) return null;
+                                                    
+                                                    return (
+                                                        <tr className="bg-blue-200 font-bold border-t-2 border-blue-400">
+                                                            <td className="px-4 py-4 text-gray-800">
+                                                                PROMEDIO DIMER ({dimerData.length} comunas)
+                                                            </td>
+                                                            <td className="px-4 py-4 text-center">
+                                                                <div className="text-red-700">{avg.actual.max}°</div>
+                                                                <div className="text-xs text-gray-600">{avg.anterior.max}°</div>
+                                                            </td>
+                                                            <td className={`px-4 py-4 text-center ${getVariationColor(avg.variacion.max.abs)}`}>
+                                                                <div>{avg.variacion.max.abs > 0 ? '+' : ''}{avg.variacion.max.abs}°</div>
+                                                                <div className="text-xs">({avg.variacion.max.pct > 0 ? '+' : ''}{avg.variacion.max.pct}%)</div>
+                                                            </td>
+                                                            <td className="px-4 py-4 text-center">
+                                                                <div className="text-blue-700">{avg.actual.min}°</div>
+                                                                <div className="text-xs text-gray-600">{avg.anterior.min}°</div>
+                                                            </td>
+                                                            <td className={`px-4 py-4 text-center ${getVariationColor(avg.variacion.min.abs)}`}>
+                                                                <div>{avg.variacion.min.abs > 0 ? '+' : ''}{avg.variacion.min.abs}°</div>
+                                                                <div className="text-xs">({avg.variacion.min.pct > 0 ? '+' : ''}{avg.variacion.min.pct}%)</div>
+                                                            </td>
+                                                            <td className="px-4 py-4 text-center">
+                                                                <div className="text-gray-800">{avg.actual.mean}°</div>
+                                                                <div className="text-xs text-gray-600">{avg.anterior.mean}°</div>
+                                                            </td>
+                                                            <td className={`px-4 py-4 text-center ${getVariationColor(avg.variacion.mean.abs)}`}>
+                                                                <div>{avg.variacion.mean.abs > 0 ? '+' : ''}{avg.variacion.mean.abs}°</div>
+                                                                <div className="text-xs">({avg.variacion.mean.pct > 0 ? '+' : ''}{avg.variacion.mean.pct}%)</div>
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })()}
+                                            </>
+                                        )}
+                                        
+                                        {/* Otras Comunas */}
+                                        {selectedProvince === 'Todas' && (
+                                            <>
+                                                <tr className="bg-gray-100">
+                                                    <td colSpan="7" className="px-4 py-3 font-bold text-gray-800 text-lg">
+                                                        🌍 OTRAS COMUNAS
+                                                    </td>
+                                                </tr>
+                                                {organizedData
+                                                    .filter(row => !COMUNAS_DIMER.includes(row.comuna))
+                                                    .map((row, index) => (
+                                                        <tr 
+                                                            key={`otras-${index}`}
+                                                            className={`border-b border-gray-200 hover:bg-gray-50 transition-colors ${getVariationBg(row.variacion.mean.abs)}`}
+                                                        >
+                                                            <td className="px-4 py-4 font-semibold text-gray-800">
+                                                                <div>{row.comuna}</div>
+                                                                <div className="text-xs text-gray-500 font-normal">
+                                                                    {getComunaProvince(row.comuna)}
+                                                                </div>
+                                                            </td>
+                                                            
+                                                            {/* Temperatura Máxima */}
+                                                            <td className="px-4 py-4 text-center">
+                                                                <div className="font-semibold text-red-600">{row.actual.max}°</div>
+                                                                <div className="text-xs text-gray-500">{row.anterior.max}°</div>
+                                                            </td>
+                                                            <td className={`px-4 py-4 text-center ${getVariationColor(row.variacion.max.abs)}`}>
+                                                                <div className="font-bold">
+                                                                    {row.variacion.max.abs > 0 ? '+' : ''}{row.variacion.max.abs}°
+                                                                </div>
+                                                                <div className="text-xs">
+                                                                    ({row.variacion.max.pct > 0 ? '+' : ''}{row.variacion.max.pct}%)
+                                                                </div>
+                                                            </td>
+                                                            
+                                                            {/* Temperatura Mínima */}
+                                                            <td className="px-4 py-4 text-center">
+                                                                <div className="font-semibold text-blue-600">{row.actual.min}°</div>
+                                                                <div className="text-xs text-gray-500">{row.anterior.min}°</div>
+                                                            </td>
+                                                            <td className={`px-4 py-4 text-center ${getVariationColor(row.variacion.min.abs)}`}>
+                                                                <div className="font-bold">
+                                                                    {row.variacion.min.abs > 0 ? '+' : ''}{row.variacion.min.abs}°
+                                                                </div>
+                                                                <div className="text-xs">
+                                                                    ({row.variacion.min.pct > 0 ? '+' : ''}{row.variacion.min.pct}%)
+                                                                </div>
+                                                            </td>
+                                                            
+                                                            {/* Temperatura Promedio */}
+                                                            <td className="px-4 py-4 text-center">
+                                                                <div className="font-semibold text-gray-800">{row.actual.mean}°</div>
+                                                                <div className="text-xs text-gray-500">{row.anterior.mean}°</div>
+                                                            </td>
+                                                            <td className={`px-4 py-4 text-center ${getVariationColor(row.variacion.mean.abs)}`}>
+                                                                <div className="font-bold">
+                                                                    {row.variacion.mean.abs > 0 ? '+' : ''}{row.variacion.mean.abs}°
+                                                                    {row.variacion.mean.abs > 0 ? ' 🔥' : row.variacion.mean.abs < 0 ? ' ❄️' : ' ➡️'}
+                                                                </div>
+                                                                <div className="text-xs">
+                                                                    ({row.variacion.mean.pct > 0 ? '+' : ''}{row.variacion.mean.pct}%)
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    ))
+                                                }
+                                                {/* Subtotal Otras */}
+                                                {(() => {
+                                                    const otrasData = data.filter(row => !COMUNAS_DIMER.includes(row.comuna));
+                                                    const avg = calculateGroupAverage(otrasData);
+                                                    if (!avg) return null;
+                                                    
+                                                    return (
+                                                        <tr className="bg-gray-300 font-bold border-t-2 border-gray-500">
+                                                            <td className="px-4 py-4 text-gray-800">
+                                                                PROMEDIO OTRAS ({otrasData.length} comunas)
+                                                            </td>
+                                                            <td className="px-4 py-4 text-center">
+                                                                <div className="text-red-700">{avg.actual.max}°</div>
+                                                                <div className="text-xs text-gray-600">{avg.anterior.max}°</div>
+                                                            </td>
+                                                            <td className={`px-4 py-4 text-center ${getVariationColor(avg.variacion.max.abs)}`}>
+                                                                <div>{avg.variacion.max.abs > 0 ? '+' : ''}{avg.variacion.max.abs}°</div>
+                                                                <div className="text-xs">({avg.variacion.max.pct > 0 ? '+' : ''}{avg.variacion.max.pct}%)</div>
+                                                            </td>
+                                                            <td className="px-4 py-4 text-center">
+                                                                <div className="text-blue-700">{avg.actual.min}°</div>
+                                                                <div className="text-xs text-gray-600">{avg.anterior.min}°</div>
+                                                            </td>
+                                                            <td className={`px-4 py-4 text-center ${getVariationColor(avg.variacion.min.abs)}`}>
+                                                                <div>{avg.variacion.min.abs > 0 ? '+' : ''}{avg.variacion.min.abs}°</div>
+                                                                <div className="text-xs">({avg.variacion.min.pct > 0 ? '+' : ''}{avg.variacion.min.pct}%)</div>
+                                                            </td>
+                                                            <td className="px-4 py-4 text-center">
+                                                                <div className="text-gray-800">{avg.actual.mean}°</div>
+                                                                <div className="text-xs text-gray-600">{avg.anterior.mean}°</div>
+                                                            </td>
+                                                            <td className={`px-4 py-4 text-center ${getVariationColor(avg.variacion.mean.abs)}`}>
+                                                                <div>{avg.variacion.mean.abs > 0 ? '+' : ''}{avg.variacion.mean.abs}°</div>
+                                                                <div className="text-xs">({avg.variacion.mean.pct > 0 ? '+' : ''}{avg.variacion.mean.pct}%)</div>
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })()}
+                                            </>
+                                        )}
+                                        
+                                        {/* Mostrar filtros individuales */}
+                                        {selectedProvince !== 'Todas' && selectedProvince !== 'DIMER' && selectedProvince !== 'Otras' && 
+                                            filteredData.map((row, index) => (
+                                                <tr 
+                                                    key={index}
+                                                    className={`border-b border-gray-200 hover:bg-gray-50 transition-colors ${getVariationBg(row.variacion.mean.abs)}`}
+                                                >
+                                                    <td className="px-4 py-4 font-semibold text-gray-800">
+                                                        <div>{row.comuna}</div>
+                                                        <div className="text-xs text-gray-500 font-normal">
+                                                            {getComunaProvince(row.comuna)}
+                                                        </div>
+                                                    </td>
+                                                    
+                                                    <td className="px-4 py-4 text-center">
+                                                        <div className="font-semibold text-red-600">{row.actual.max}°</div>
+                                                        <div className="text-xs text-gray-500">{row.anterior.max}°</div>
+                                                    </td>
+                                                    <td className={`px-4 py-4 text-center ${getVariationColor(row.variacion.max.abs)}`}>
+                                                        <div className="font-bold">
+                                                            {row.variacion.max.abs > 0 ? '+' : ''}{row.variacion.max.abs}°
+                                                        </div>
+                                                        <div className="text-xs">
+                                                            ({row.variacion.max.pct > 0 ? '+' : ''}{row.variacion.max.pct}%)
+                                                        </div>
+                                                    </td>
+                                                    
+                                                    <td className="px-4 py-4 text-center">
+                                                        <div className="font-semibold text-blue-600">{row.actual.min}°</div>
+                                                        <div className="text-xs text-gray-500">{row.anterior.min}°</div>
+                                                    </td>
+                                                    <td className={`px-4 py-4 text-center ${getVariationColor(row.variacion.min.abs)}`}>
+                                                        <div className="font-bold">
+                                                            {row.variacion.min.abs > 0 ? '+' : ''}{row.variacion.min.abs}°
+                                                        </div>
+                                                        <div className="text-xs">
+                                                            ({row.variacion.min.pct > 0 ? '+' : ''}{row.variacion.min.pct}%)
+                                                        </div>
+                                                    </td>
+                                                    
+                                                    <td className="px-4 py-4 text-center">
+                                                        <div className="font-semibold text-gray-800">{row.actual.mean}°</div>
+                                                        <div className="text-xs text-gray-500">{row.anterior.mean}°</div>
+                                                    </td>
+                                                    <td className={`px-4 py-4 text-center ${getVariationColor(row.variacion.mean.abs)}`}>
+                                                        <div className="font-bold">
+                                                            {row.variacion.mean.abs > 0 ? '+' : ''}{row.variacion.mean.abs}°
+                                                            {row.variacion.mean.abs > 0 ? ' 🔥' : row.variacion.mean.abs < 0 ? ' ❄️' : ' ➡️'}
+                                                        </div>
+                                                        <div className="text-xs">
+                                                            ({row.variacion.mean.pct > 0 ? '+' : ''}{row.variacion.mean.pct}%)
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        }
+                                        
+                                        {/* Solo DIMER o Otras */}
+                                        {(selectedProvince === 'DIMER' || selectedProvince === 'Otras') &&
+                                            filteredData.map((row, index) => (
+                                                <tr 
+                                                    key={index}
+                                                    className={`border-b border-gray-200 hover:bg-gray-50 transition-colors ${getVariationBg(row.variacion.mean.abs)}`}
+                                                >
+                                                    <td className="px-4 py-4 font-semibold text-gray-800">
+                                                        <div>{row.comuna}</div>
+                                                        <div className="text-xs text-gray-500 font-normal">
+                                                            {getComunaProvince(row.comuna)}
+                                                        </div>
+                                                    </td>
+                                                    
+                                                    <td className="px-4 py-4 text-center">
+                                                        <div className="font-semibold text-red-600">{row.actual.max}°</div>
+                                                        <div className="text-xs text-gray-500">{row.anterior.max}°</div>
+                                                    </td>
+                                                    <td className={`px-4 py-4 text-center ${getVariationColor(row.variacion.max.abs)}`}>
+                                                        <div className="font-bold">
+                                                            {row.variacion.max.abs > 0 ? '+' : ''}{row.variacion.max.abs}°
+                                                        </div>
+                                                        <div className="text-xs">
+                                                            ({row.variacion.max.pct > 0 ? '+' : ''}{row.variacion.max.pct}%)
+                                                        </div>
+                                                    </td>
+                                                    
+                                                    <td className="px-4 py-4 text-center">
+                                                        <div className="font-semibold text-blue-600">{row.actual.min}°</div>
+                                                        <div className="text-xs text-gray-500">{row.anterior.min}°</div>
+                                                    </td>
+                                                    <td className={`px-4 py-4 text-center ${getVariationColor(row.variacion.min.abs)}`}>
+                                                        <div className="font-bold">
+                                                            {row.variacion.min.abs > 0 ? '+' : ''}{row.variacion.min.abs}°
+                                                        </div>
+                                                        <div className="text-xs">
+                                                            ({row.variacion.min.pct > 0 ? '+' : ''}{row.variacion.min.pct}%)
+                                                        </div>
+                                                    </td>
+                                                    
+                                                    <td className="px-4 py-4 text-center">
+                                                        <div className="font-semibold text-gray-800">{row.actual.mean}°</div>
+                                                        <div className="text-xs text-gray-500">{row.anterior.mean}°</div>
+                                                    </td>
+                                                    <td className={`px-4 py-4 text-center ${getVariationColor(row.variacion.mean.abs)}`}>
+                                                        <div className="font-bold">
+                                                            {row.variacion.mean.abs > 0 ? '+' : ''}{row.variacion.mean.abs}°
+                                                            {row.variacion.mean.abs > 0 ? ' 🔥' : row.variacion.mean.abs < 0 ? ' ❄️' : ' ➡️'}
+                                                        </div>
+                                                        <div className="text-xs">
+                                                            ({row.variacion.mean.pct > 0 ? '+' : ''}{row.variacion.mean.pct}%)
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        }
                                     </tbody>
                                 </table>
                             </div>
@@ -482,6 +881,14 @@
                         {/* Legend */}
                         <div className="mt-6 bg-white rounded-lg shadow-lg p-6">
                             <h3 className="font-semibold text-gray-800 mb-3">📊 Información</h3>
+                            
+                            <div className="bg-blue-50 border-l-4 border-blue-500 p-4 mb-4">
+                                <h4 className="font-bold text-blue-900 mb-2">🏢 Comunas DIMER</h4>
+                                <p className="text-sm text-blue-800">
+                                    Viña del Mar • Valparaíso • Quilpué • Villa Alemana • Olmué • Limache
+                                </p>
+                            </div>
+                            
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm mb-4">
                                 <div>
                                     <span className="font-semibold">Promedio Máximas:</span> Promedio de las temperaturas máximas diarias del periodo
@@ -505,7 +912,7 @@
                                 </div>
                             </div>
                             <p className="text-xs text-gray-500 mt-4">
-                                Datos obtenidos de Open-Meteo API • 38 comunas de la V región • Periodo: {dateRange.label || 'Cargando...'} • Actualizado: {new Date().toLocaleDateString('es-CL', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                Datos obtenidos de Open-Meteo API • 38 comunas de la V región (6 DIMER + 32 otras) • Periodo: {dateRange.label || 'Cargando...'} • Actualizado: {new Date().toLocaleDateString('es-CL', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                             </p>
                         </div>
                     </div>
