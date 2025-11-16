@@ -208,18 +208,18 @@
                 const meanTemps = dailyData.temperature_2m_mean;
 
                 return {
-                    max: Math.round(maxTemps.reduce((a, b) => Math.max(a, b), -Infinity) * 10) / 10,
-                    min: Math.round(minTemps.reduce((a, b) => Math.min(a, b), Infinity) * 10) / 10,
+                    max: Math.round((maxTemps.reduce((a, b) => a + b, 0) / maxTemps.length) * 10) / 10,
+                    min: Math.round((minTemps.reduce((a, b) => a + b, 0) / minTemps.length) * 10) / 10,
                     mean: Math.round((meanTemps.reduce((a, b) => a + b, 0) / meanTemps.length) * 10) / 10
                 };
             };
 
             const calculateVariation = (data2025, data2024) => {
-                const max2025 = data2025.temperature_2m_max.reduce((a, b) => Math.max(a, b), -Infinity);
-                const max2024 = data2024.temperature_2m_max.reduce((a, b) => Math.max(a, b), -Infinity);
+                const max2025 = data2025.temperature_2m_max.reduce((a, b) => a + b, 0) / data2025.temperature_2m_max.length;
+                const max2024 = data2024.temperature_2m_max.reduce((a, b) => a + b, 0) / data2024.temperature_2m_max.length;
                 
-                const min2025 = data2025.temperature_2m_min.reduce((a, b) => Math.min(a, b), Infinity);
-                const min2024 = data2024.temperature_2m_min.reduce((a, b) => Math.min(a, b), Infinity);
+                const min2025 = data2025.temperature_2m_min.reduce((a, b) => a + b, 0) / data2025.temperature_2m_min.length;
+                const min2024 = data2024.temperature_2m_min.reduce((a, b) => a + b, 0) / data2024.temperature_2m_min.length;
                 
                 const mean2025 = data2025.temperature_2m_mean.reduce((a, b) => a + b, 0) / data2025.temperature_2m_mean.length;
                 const mean2024 = data2024.temperature_2m_mean.reduce((a, b) => a + b, 0) / data2024.temperature_2m_mean.length;
@@ -368,7 +368,7 @@
                                             : '0°C'
                                         }
                                     </div>
-                                    <div className="text-sm text-gray-600">Temp. máxima registrada</div>
+                                    <div className="text-sm text-gray-600">Mayor promedio de máximas</div>
                                 </div>
                             </div>
                             
@@ -399,10 +399,10 @@
                                         <tr>
                                             <th className="px-4 py-4 text-left font-semibold" rowSpan="2">Comuna</th>
                                             <th className="px-4 py-3 text-center font-semibold" colSpan="2">
-                                                Temperatura Máxima
+                                                Promedio Máximas
                                             </th>
                                             <th className="px-4 py-3 text-center font-semibold" colSpan="2">
-                                                Temperatura Mínima
+                                                Promedio Mínimas
                                             </th>
                                             <th className="px-4 py-3 text-center font-semibold" colSpan="2">
                                                 Temperatura Promedio
@@ -481,7 +481,15 @@
 
                         {/* Legend */}
                         <div className="mt-6 bg-white rounded-lg shadow-lg p-6">
-                            <h3 className="font-semibold text-gray-800 mb-3">📊 Leyenda</h3>
+                            <h3 className="font-semibold text-gray-800 mb-3">📊 Información</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm mb-4">
+                                <div>
+                                    <span className="font-semibold">Promedio Máximas:</span> Promedio de las temperaturas máximas diarias del periodo
+                                </div>
+                                <div>
+                                    <span className="font-semibold">Promedio Mínimas:</span> Promedio de las temperaturas mínimas diarias del periodo
+                                </div>
+                            </div>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                                 <div className="flex items-center gap-2">
                                     <div className="w-4 h-4 bg-red-50 border border-red-200 rounded"></div>
