@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DIMER - Análisis de Temperaturas V Región</title>
+    <title>DIMER - Análisis de Temperaturas V Región (Ponderado por Población)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@babel/standalone/babel.min.js"></script>
@@ -15,55 +15,55 @@
     <script type="text/babel">
         const { useState, useEffect } = React;
 
-        // Comunas de la V región con sus coordenadas
+        // Comunas de la V región con sus coordenadas y población (Censo 2024)
         const COMUNAS = [
             // Provincia de Valparaíso
-            { nombre: "Valparaíso", lat: -33.0472, lon: -71.6127 },
-            { nombre: "Viña del Mar", lat: -33.0246, lon: -71.5518 },
-            { nombre: "Quilpué", lat: -33.0472, lon: -71.4425 },
-            { nombre: "Villa Alemana", lat: -33.0453, lon: -71.3729 },
-            { nombre: "Concón", lat: -32.9254, lon: -71.5203 },
-            { nombre: "Quintero", lat: -32.7833, lon: -71.5333 },
-            { nombre: "Puchuncaví", lat: -32.7333, lon: -71.4167 },
-            { nombre: "Casablanca", lat: -33.3167, lon: -71.4167 },
+            { nombre: "Valparaíso", lat: -33.0472, lon: -71.6127, poblacion: 284938 },
+            { nombre: "Viña del Mar", lat: -33.0246, lon: -71.5518, poblacion: 334871 },
+            { nombre: "Quilpué", lat: -33.0472, lon: -71.4425, poblacion: 162559 },
+            { nombre: "Villa Alemana", lat: -33.0453, lon: -71.3729, poblacion: 139571 },
+            { nombre: "Concón", lat: -32.9254, lon: -71.5203, poblacion: 48294 },
+            { nombre: "Quintero", lat: -32.7833, lon: -71.5333, poblacion: 35754 },
+            { nombre: "Puchuncaví", lat: -32.7333, lon: -71.4167, poblacion: 22539 },
+            { nombre: "Casablanca", lat: -33.3167, lon: -71.4167, poblacion: 29876 },
             
             // Provincia de San Antonio
-            { nombre: "San Antonio", lat: -33.5953, lon: -71.6178 },
-            { nombre: "Cartagena", lat: -33.5533, lon: -71.6089 },
-            { nombre: "El Tabo", lat: -33.4500, lon: -71.6500 },
-            { nombre: "El Quisco", lat: -33.3950, lon: -71.6978 },
-            { nombre: "Algarrobo", lat: -33.3667, lon: -71.6667 },
-            { nombre: "Santo Domingo", lat: -33.6500, lon: -71.6167 },
+            { nombre: "San Antonio", lat: -33.5953, lon: -71.6178, poblacion: 96770 },
+            { nombre: "Cartagena", lat: -33.5533, lon: -71.6089, poblacion: 24599 },
+            { nombre: "El Tabo", lat: -33.4500, lon: -71.6500, poblacion: 16260 },
+            { nombre: "El Quisco", lat: -33.3950, lon: -71.6978, poblacion: 18971 },
+            { nombre: "Algarrobo", lat: -33.3667, lon: -71.6667, poblacion: 16076 },
+            { nombre: "Santo Domingo", lat: -33.6500, lon: -71.6167, poblacion: 13171 },
             
             // Provincia de Quillota
-            { nombre: "Quillota", lat: -32.8833, lon: -71.2500 },
-            { nombre: "La Calera", lat: -32.7833, lon: -71.2000 },
-            { nombre: "La Cruz", lat: -32.8333, lon: -71.2333 },
-            { nombre: "Nogales", lat: -32.7333, lon: -71.2167 },
-            { nombre: "Hijuelas", lat: -32.8167, lon: -71.1667 },
-            { nombre: "Limache", lat: -33.0167, lon: -71.2667 },
-            { nombre: "Olmué", lat: -33.0100, lon: -71.2000 },
+            { nombre: "Quillota", lat: -32.8833, lon: -71.2500, poblacion: 96753 },
+            { nombre: "La Calera", lat: -32.7833, lon: -71.2000, poblacion: 50631 },
+            { nombre: "La Cruz", lat: -32.8333, lon: -71.2333, poblacion: 24939 },
+            { nombre: "Nogales", lat: -32.7333, lon: -71.2167, poblacion: 22136 },
+            { nombre: "Hijuelas", lat: -32.8167, lon: -71.1667, poblacion: 19286 },
+            { nombre: "Limache", lat: -33.0167, lon: -71.2667, poblacion: 56145 },
+            { nombre: "Olmué", lat: -33.0100, lon: -71.2000, poblacion: 19778 },
             
             // Provincia de Los Andes
-            { nombre: "Los Andes", lat: -32.8333, lon: -70.6000 },
-            { nombre: "San Esteban", lat: -32.7833, lon: -70.5833 },
-            { nombre: "Calle Larga", lat: -32.8667, lon: -70.6333 },
-            { nombre: "Rinconada", lat: -32.8333, lon: -70.7167 },
+            { nombre: "Los Andes", lat: -32.8333, lon: -70.6000, poblacion: 63440 },
+            { nombre: "San Esteban", lat: -32.7833, lon: -70.5833, poblacion: 20112 },
+            { nombre: "Calle Larga", lat: -32.8667, lon: -70.6333, poblacion: 16597 },
+            { nombre: "Rinconada", lat: -32.8333, lon: -70.7167, poblacion: 11855 },
             
             // Provincia de San Felipe
-            { nombre: "San Felipe", lat: -32.7500, lon: -70.7333 },
-            { nombre: "Putaendo", lat: -32.6333, lon: -70.7167 },
-            { nombre: "Santa María", lat: -32.7500, lon: -70.6667 },
-            { nombre: "Panquehue", lat: -32.8167, lon: -70.8333 },
-            { nombre: "Llaillay", lat: -32.8333, lon: -70.9667 },
-            { nombre: "Catemu", lat: -32.7833, lon: -70.8833 },
+            { nombre: "San Felipe", lat: -32.7500, lon: -70.7333, poblacion: 80413 },
+            { nombre: "Putaendo", lat: -32.6333, lon: -70.7167, poblacion: 17336 },
+            { nombre: "Santa María", lat: -32.7500, lon: -70.6667, poblacion: 15134 },
+            { nombre: "Panquehue", lat: -32.8167, lon: -70.8333, poblacion: 7269 },
+            { nombre: "Llaillay", lat: -32.8333, lon: -70.9667, poblacion: 25484 },
+            { nombre: "Catemu", lat: -32.7833, lon: -70.8833, poblacion: 13760 },
             
             // Provincia de Petorca
-            { nombre: "La Ligua", lat: -32.4500, lon: -71.2333 },
-            { nombre: "Cabildo", lat: -32.4167, lon: -71.0833 },
-            { nombre: "Papudo", lat: -32.5167, lon: -71.4500 },
-            { nombre: "Zapallar", lat: -32.5500, lon: -71.4667 },
-            { nombre: "Petorca", lat: -32.2500, lon: -70.9333 }
+            { nombre: "La Ligua", lat: -32.4500, lon: -71.2333, poblacion: 39270 },
+            { nombre: "Cabildo", lat: -32.4167, lon: -71.0833, poblacion: 20015 },
+            { nombre: "Papudo", lat: -32.5167, lon: -71.4500, poblacion: 7561 },
+            { nombre: "Zapallar", lat: -32.5500, lon: -71.4667, poblacion: 7980 },
+            { nombre: "Petorca", lat: -32.2500, lon: -70.9333, poblacion: 10206 }
         ];
 
         const TemperatureComparison = () => {
@@ -105,34 +105,34 @@
                 ? data.filter(row => !COMUNAS_DIMER.includes(row.comuna))
                 : data.filter(row => getComunaProvince(row.comuna) === selectedProvince);
 
-            // Calcular promedios para grupos de comunas
-            const calculateGroupAverage = (comunas) => {
+            // Calcular promedios PONDERADOS por población
+            const calculateWeightedAverage = (comunas) => {
                 if (comunas.length === 0) return null;
                 
-                const sumActual = {
-                    max: comunas.reduce((sum, c) => sum + c.actual.max, 0),
-                    min: comunas.reduce((sum, c) => sum + c.actual.min, 0),
-                    mean: comunas.reduce((sum, c) => sum + c.actual.mean, 0)
+                const totalPoblacion = comunas.reduce((sum, c) => sum + c.poblacion, 0);
+                
+                const weightedActual = {
+                    max: comunas.reduce((sum, c) => sum + (c.actual.max * c.poblacion), 0) / totalPoblacion,
+                    min: comunas.reduce((sum, c) => sum + (c.actual.min * c.poblacion), 0) / totalPoblacion,
+                    mean: comunas.reduce((sum, c) => sum + (c.actual.mean * c.poblacion), 0) / totalPoblacion
                 };
                 
-                const sumAnterior = {
-                    max: comunas.reduce((sum, c) => sum + c.anterior.max, 0),
-                    min: comunas.reduce((sum, c) => sum + c.anterior.min, 0),
-                    mean: comunas.reduce((sum, c) => sum + c.anterior.mean, 0)
+                const weightedAnterior = {
+                    max: comunas.reduce((sum, c) => sum + (c.anterior.max * c.poblacion), 0) / totalPoblacion,
+                    min: comunas.reduce((sum, c) => sum + (c.anterior.min * c.poblacion), 0) / totalPoblacion,
+                    mean: comunas.reduce((sum, c) => sum + (c.anterior.mean * c.poblacion), 0) / totalPoblacion
                 };
-                
-                const count = comunas.length;
                 
                 const avgActual = {
-                    max: Math.round((sumActual.max / count) * 10) / 10,
-                    min: Math.round((sumActual.min / count) * 10) / 10,
-                    mean: Math.round((sumActual.mean / count) * 10) / 10
+                    max: Math.round(weightedActual.max * 10) / 10,
+                    min: Math.round(weightedActual.min * 10) / 10,
+                    mean: Math.round(weightedActual.mean * 10) / 10
                 };
                 
                 const avgAnterior = {
-                    max: Math.round((sumAnterior.max / count) * 10) / 10,
-                    min: Math.round((sumAnterior.min / count) * 10) / 10,
-                    mean: Math.round((sumAnterior.mean / count) * 10) / 10
+                    max: Math.round(weightedAnterior.max * 10) / 10,
+                    min: Math.round(weightedAnterior.min * 10) / 10,
+                    mean: Math.round(weightedAnterior.mean * 10) / 10
                 };
                 
                 const calcPercentage = (val2025, val2024) => {
@@ -143,6 +143,7 @@
                 return {
                     actual: avgActual,
                     anterior: avgAnterior,
+                    poblacion: totalPoblacion,
                     variacion: {
                         max: {
                             abs: Math.round((avgActual.max - avgAnterior.max) * 10) / 10,
@@ -255,6 +256,7 @@
 
                         results.push({
                             comuna: comuna.nombre,
+                            poblacion: comuna.poblacion,
                             actual: calculateStats(data2025),
                             anterior: calculateStats(data2024),
                             variacion: calculateVariation(data2025, data2024)
@@ -337,6 +339,10 @@
                 return 'bg-white';
             };
 
+            const formatNumber = (num) => {
+                return num.toLocaleString('es-CL');
+            };
+
             if (loading) {
                 return (
                     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-orange-50 flex items-center justify-center p-4">
@@ -395,7 +401,7 @@
                                             Análisis de Temperaturas - V Región
                                         </h1>
                                         <p className="text-gray-600">
-                                            Comparación: {dateRange.label || 'Cargando...'}
+                                            Comparación: {dateRange.label || 'Cargando...'} • Ponderado por población (Censo 2024)
                                         </p>
                                     </div>
                                 </div>
@@ -433,64 +439,100 @@
                             </div>
                         </div>
 
-                        {/* Insights Card */}
+                        {/* Insights Card con Promedios Ponderados */}
                         <div className="bg-gradient-to-r from-orange-100 to-yellow-100 rounded-lg shadow-lg p-6 mb-6">
-                            <h2 className="text-xl font-bold text-gray-800 mb-3">💡 Insights DIMER</h2>
+                            <h2 className="text-xl font-bold text-gray-800 mb-3">💡 Insights DIMER - Promedios Ponderados por Población</h2>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                                 {/* Métricas DIMER */}
                                 <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg p-4 border-2 border-blue-300">
-                                    <h3 className="font-bold text-blue-800 mb-3 text-lg">🏢 Comunas DIMER (6)</h3>
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <div className="bg-white rounded p-2">
-                                            <div className="text-lg font-bold text-orange-600">
-                                                {data.filter(d => COMUNAS_DIMER.includes(d.comuna) && d.variacion.mean.abs > 0).length}
-                                            </div>
-                                            <div className="text-xs text-gray-600">Más cálidas 🔥</div>
-                                        </div>
-                                        <div className="bg-white rounded p-2">
-                                            <div className="text-lg font-bold text-blue-600">
-                                                {data.filter(d => COMUNAS_DIMER.includes(d.comuna) && d.variacion.mean.abs < 0).length}
-                                            </div>
-                                            <div className="text-xs text-gray-600">Más frías ❄️</div>
-                                        </div>
-                                        <div className="bg-white rounded p-2 col-span-2">
-                                            <div className="text-lg font-bold text-green-600">
-                                                {data.filter(d => COMUNAS_DIMER.includes(d.comuna)).length > 0 ? 
-                                                    data.filter(d => COMUNAS_DIMER.includes(d.comuna)).reduce((max, d) => d.actual.mean > max ? d.actual.mean : max, 0) + '°C'
-                                                    : '0°C'
-                                                }
-                                            </div>
-                                            <div className="text-xs text-gray-600">Mayor promedio DIMER</div>
-                                        </div>
-                                    </div>
+                                    <h3 className="font-bold text-blue-800 mb-3 text-lg">🏢 Comunas DIMER (6 comunas)</h3>
+                                    {(() => {
+                                        const dimerData = data.filter(d => COMUNAS_DIMER.includes(d.comuna));
+                                        const avg = calculateWeightedAverage(dimerData);
+                                        if (!avg) return null;
+                                        
+                                        return (
+                                            <>
+                                                <div className="bg-white rounded p-3 mb-2">
+                                                    <div className="text-sm text-gray-600 mb-1">Población Total</div>
+                                                    <div className="text-2xl font-bold text-blue-800">{formatNumber(avg.poblacion)}</div>
+                                                </div>
+                                                <div className="grid grid-cols-2 gap-3">
+                                                    <div className="bg-white rounded p-2">
+                                                        <div className="text-lg font-bold text-orange-600">
+                                                            {dimerData.filter(d => d.variacion.mean.abs > 0).length}
+                                                        </div>
+                                                        <div className="text-xs text-gray-600">Más cálidas 🔥</div>
+                                                    </div>
+                                                    <div className="bg-white rounded p-2">
+                                                        <div className="text-lg font-bold text-blue-600">
+                                                            {dimerData.filter(d => d.variacion.mean.abs < 0).length}
+                                                        </div>
+                                                        <div className="text-xs text-gray-600">Más frías ❄️</div>
+                                                    </div>
+                                                    <div className="bg-white rounded p-2 col-span-2">
+                                                        <div className="text-lg font-bold text-green-600">
+                                                            {avg.actual.mean}°C
+                                                        </div>
+                                                        <div className="text-xs text-gray-600">Promedio ponderado 2025</div>
+                                                    </div>
+                                                    <div className="bg-white rounded p-2 col-span-2">
+                                                        <div className={`text-lg font-bold ${getVariationColor(avg.variacion.mean.abs)}`}>
+                                                            {avg.variacion.mean.abs > 0 ? '+' : ''}{avg.variacion.mean.abs}°C 
+                                                            ({avg.variacion.mean.pct > 0 ? '+' : ''}{avg.variacion.mean.pct}%)
+                                                        </div>
+                                                        <div className="text-xs text-gray-600">Variación vs 2024</div>
+                                                    </div>
+                                                </div>
+                                            </>
+                                        );
+                                    })()}
                                 </div>
                                 
                                 {/* Métricas Otras */}
                                 <div className="bg-gray-50 rounded-lg p-4 border-2 border-gray-300">
-                                    <h3 className="font-bold text-gray-800 mb-3 text-lg">🌍 Otras Comunas (32)</h3>
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <div className="bg-white rounded p-2">
-                                            <div className="text-lg font-bold text-orange-600">
-                                                {data.filter(d => !COMUNAS_DIMER.includes(d.comuna) && d.variacion.mean.abs > 0).length}
-                                            </div>
-                                            <div className="text-xs text-gray-600">Más cálidas 🔥</div>
-                                        </div>
-                                        <div className="bg-white rounded p-2">
-                                            <div className="text-lg font-bold text-blue-600">
-                                                {data.filter(d => !COMUNAS_DIMER.includes(d.comuna) && d.variacion.mean.abs < 0).length}
-                                            </div>
-                                            <div className="text-xs text-gray-600">Más frías ❄️</div>
-                                        </div>
-                                        <div className="bg-white rounded p-2 col-span-2">
-                                            <div className="text-lg font-bold text-green-600">
-                                                {data.filter(d => !COMUNAS_DIMER.includes(d.comuna)).length > 0 ? 
-                                                    data.filter(d => !COMUNAS_DIMER.includes(d.comuna)).reduce((max, d) => d.actual.mean > max ? d.actual.mean : max, 0) + '°C'
-                                                    : '0°C'
-                                                }
-                                            </div>
-                                            <div className="text-xs text-gray-600">Mayor promedio otras</div>
-                                        </div>
-                                    </div>
+                                    <h3 className="font-bold text-gray-800 mb-3 text-lg">🌍 Otras Comunas (30 comunas)</h3>
+                                    {(() => {
+                                        const otrasData = data.filter(d => !COMUNAS_DIMER.includes(d.comuna));
+                                        const avg = calculateWeightedAverage(otrasData);
+                                        if (!avg) return null;
+                                        
+                                        return (
+                                            <>
+                                                <div className="bg-white rounded p-3 mb-2">
+                                                    <div className="text-sm text-gray-600 mb-1">Población Total</div>
+                                                    <div className="text-2xl font-bold text-gray-800">{formatNumber(avg.poblacion)}</div>
+                                                </div>
+                                                <div className="grid grid-cols-2 gap-3">
+                                                    <div className="bg-white rounded p-2">
+                                                        <div className="text-lg font-bold text-orange-600">
+                                                            {otrasData.filter(d => d.variacion.mean.abs > 0).length}
+                                                        </div>
+                                                        <div className="text-xs text-gray-600">Más cálidas 🔥</div>
+                                                    </div>
+                                                    <div className="bg-white rounded p-2">
+                                                        <div className="text-lg font-bold text-blue-600">
+                                                            {otrasData.filter(d => d.variacion.mean.abs < 0).length}
+                                                        </div>
+                                                        <div className="text-xs text-gray-600">Más frías ❄️</div>
+                                                    </div>
+                                                    <div className="bg-white rounded p-2 col-span-2">
+                                                        <div className="text-lg font-bold text-green-600">
+                                                            {avg.actual.mean}°C
+                                                        </div>
+                                                        <div className="text-xs text-gray-600">Promedio ponderado 2025</div>
+                                                    </div>
+                                                    <div className="bg-white rounded p-2 col-span-2">
+                                                        <div className={`text-lg font-bold ${getVariationColor(avg.variacion.mean.abs)}`}>
+                                                            {avg.variacion.mean.abs > 0 ? '+' : ''}{avg.variacion.mean.abs}°C 
+                                                            ({avg.variacion.mean.pct > 0 ? '+' : ''}{avg.variacion.mean.pct}%)
+                                                        </div>
+                                                        <div className="text-xs text-gray-600">Variación vs 2024</div>
+                                                    </div>
+                                                </div>
+                                            </>
+                                        );
+                                    })()}
                                 </div>
                             </div>
                             
@@ -508,7 +550,7 @@
                                                         ? 'bg-blue-100 text-blue-800 border-2 border-blue-400' 
                                                         : 'bg-orange-100 text-orange-800'
                                                 }`}>
-                                                    {i + 1}. {d.comuna} ({d.actual.mean}°C) {COMUNAS_DIMER.includes(d.comuna) ? '🏢' : ''}
+                                                    {i + 1}. {d.comuna} ({d.actual.mean}°C) - {formatNumber(d.poblacion)} hab. {COMUNAS_DIMER.includes(d.comuna) ? '🏢' : ''}
                                                 </span>
                                             ))
                                         }
@@ -524,6 +566,10 @@
                                     <thead className="bg-gradient-to-r from-blue-600 to-orange-600 text-white">
                                         <tr>
                                             <th className="px-4 py-4 text-left font-semibold" rowSpan="2">Comuna</th>
+                                            <th className="px-4 py-3 text-center font-semibold" rowSpan="2">
+                                                Población<br/>
+                                                <span className="text-xs font-normal">(Censo 2024)</span>
+                                            </th>
                                             <th className="px-4 py-3 text-center font-semibold" colSpan="2">
                                                 Promedio Máximas
                                             </th>
@@ -548,7 +594,7 @@
                                         {(selectedProvince === 'Todas' || selectedProvince === 'DIMER') && (
                                             <>
                                                 <tr className="bg-gradient-to-r from-blue-100 to-orange-100">
-                                                    <td colSpan="7" className="px-4 py-3 font-bold text-gray-800 text-lg">
+                                                    <td colSpan="8" className="px-4 py-3 font-bold text-gray-800 text-lg">
                                                         🏢 COMUNAS DIMER
                                                     </td>
                                                 </tr>
@@ -564,6 +610,10 @@
                                                                 <div className="text-xs text-blue-600 font-normal">
                                                                     DIMER
                                                                 </div>
+                                                            </td>
+                                                            
+                                                            <td className="px-4 py-4 text-center text-sm text-gray-600">
+                                                                {formatNumber(row.poblacion)}
                                                             </td>
                                                             
                                                             {/* Temperatura Máxima */}
@@ -611,16 +661,19 @@
                                                         </tr>
                                                     ))
                                                 }
-                                                {/* Subtotal DIMER */}
+                                                {/* Subtotal DIMER PONDERADO */}
                                                 {(() => {
                                                     const dimerData = data.filter(row => COMUNAS_DIMER.includes(row.comuna));
-                                                    const avg = calculateGroupAverage(dimerData);
+                                                    const avg = calculateWeightedAverage(dimerData);
                                                     if (!avg) return null;
                                                     
                                                     return (
                                                         <tr className="bg-blue-200 font-bold border-t-2 border-blue-400">
                                                             <td className="px-4 py-4 text-gray-800">
-                                                                PROMEDIO DIMER ({dimerData.length} comunas)
+                                                                PROMEDIO PONDERADO DIMER
+                                                            </td>
+                                                            <td className="px-4 py-4 text-center text-blue-800">
+                                                                {formatNumber(avg.poblacion)}
                                                             </td>
                                                             <td className="px-4 py-4 text-center">
                                                                 <div className="text-red-700">{avg.actual.max}°</div>
@@ -656,7 +709,7 @@
                                         {selectedProvince === 'Todas' && (
                                             <>
                                                 <tr className="bg-gray-100">
-                                                    <td colSpan="7" className="px-4 py-3 font-bold text-gray-800 text-lg">
+                                                    <td colSpan="8" className="px-4 py-3 font-bold text-gray-800 text-lg">
                                                         🌍 OTRAS COMUNAS
                                                     </td>
                                                 </tr>
@@ -672,6 +725,10 @@
                                                                 <div className="text-xs text-gray-500 font-normal">
                                                                     {getComunaProvince(row.comuna)}
                                                                 </div>
+                                                            </td>
+                                                            
+                                                            <td className="px-4 py-4 text-center text-sm text-gray-600">
+                                                                {formatNumber(row.poblacion)}
                                                             </td>
                                                             
                                                             {/* Temperatura Máxima */}
@@ -719,16 +776,19 @@
                                                         </tr>
                                                     ))
                                                 }
-                                                {/* Subtotal Otras */}
+                                                {/* Subtotal Otras PONDERADO */}
                                                 {(() => {
                                                     const otrasData = data.filter(row => !COMUNAS_DIMER.includes(row.comuna));
-                                                    const avg = calculateGroupAverage(otrasData);
+                                                    const avg = calculateWeightedAverage(otrasData);
                                                     if (!avg) return null;
                                                     
                                                     return (
                                                         <tr className="bg-gray-300 font-bold border-t-2 border-gray-500">
                                                             <td className="px-4 py-4 text-gray-800">
-                                                                PROMEDIO OTRAS ({otrasData.length} comunas)
+                                                                PROMEDIO PONDERADO OTRAS
+                                                            </td>
+                                                            <td className="px-4 py-4 text-center text-gray-800">
+                                                                {formatNumber(avg.poblacion)}
                                                             </td>
                                                             <td className="px-4 py-4 text-center">
                                                                 <div className="text-red-700">{avg.actual.max}°</div>
@@ -772,6 +832,10 @@
                                                         <div className="text-xs text-gray-500 font-normal">
                                                             {getComunaProvince(row.comuna)}
                                                         </div>
+                                                    </td>
+                                                    
+                                                    <td className="px-4 py-4 text-center text-sm text-gray-600">
+                                                        {formatNumber(row.poblacion)}
                                                     </td>
                                                     
                                                     <td className="px-4 py-4 text-center">
@@ -831,6 +895,10 @@
                                                         </div>
                                                     </td>
                                                     
+                                                    <td className="px-4 py-4 text-center text-sm text-gray-600">
+                                                        {formatNumber(row.poblacion)}
+                                                    </td>
+                                                    
                                                     <td className="px-4 py-4 text-center">
                                                         <div className="font-semibold text-red-600">{row.actual.max}°</div>
                                                         <div className="text-xs text-gray-500">{row.anterior.max}°</div>
@@ -882,10 +950,18 @@
                         <div className="mt-6 bg-white rounded-lg shadow-lg p-6">
                             <h3 className="font-semibold text-gray-800 mb-3">📊 Información</h3>
                             
+                            <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-l-4 border-green-500 p-4 mb-4">
+                                <h4 className="font-bold text-green-900 mb-2">⚖️ Promedios Ponderados por Población</h4>
+                                <p className="text-sm text-green-800">
+                                    Los subtotales DIMER y OTRAS ahora usan <strong>promedios ponderados</strong> que consideran la población de cada comuna (Censo 2024). 
+                                    Esto significa que las comunas más grandes tienen mayor peso en el cálculo, reflejando mejor el impacto real en tu negocio de helados.
+                                </p>
+                            </div>
+                            
                             <div className="bg-blue-50 border-l-4 border-blue-500 p-4 mb-4">
-                                <h4 className="font-bold text-blue-900 mb-2">🏢 Comunas DIMER</h4>
+                                <h4 className="font-bold text-blue-900 mb-2">🏢 Comunas DIMER ({formatNumber(data.filter(d => COMUNAS_DIMER.includes(d.comuna)).reduce((sum, d) => sum + d.poblacion, 0))} habitantes)</h4>
                                 <p className="text-sm text-blue-800">
-                                    Viña del Mar • Valparaíso • Quilpué • Villa Alemana • Olmué • Limache
+                                    Viña del Mar (334,871) • Valparaíso (284,938) • Quilpué (162,559) • Villa Alemana (139,571) • Limache (56,145) • Olmué (19,778)
                                 </p>
                             </div>
                             
@@ -912,7 +988,7 @@
                                 </div>
                             </div>
                             <p className="text-xs text-gray-500 mt-4">
-                                Datos obtenidos de Open-Meteo API • 38 comunas de la V región (6 DIMER + 32 otras) • Periodo: {dateRange.label || 'Cargando...'} • Actualizado: {new Date().toLocaleDateString('es-CL', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                Datos obtenidos de Open-Meteo API • Población: Censo 2024 (INE) • 36 comunas de la V región (6 DIMER + 30 otras) • Periodo: {dateRange.label || 'Cargando...'} • Actualizado: {new Date().toLocaleDateString('es-CL', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                             </p>
                         </div>
                     </div>
