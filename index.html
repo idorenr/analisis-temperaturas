@@ -225,10 +225,8 @@
                 const mean2024 = data2024.temperature_2m_mean.reduce((a, b) => a + b, 0) / data2024.temperature_2m_mean.length;
                 
                 const calcPercentage = (val2025, val2024) => {
-                    // Usamos la temperatura en Kelvin (sumando 273.15) para calcular el porcentaje correctamente
-                    const val2025K = val2025 + 273.15;
-                    const val2024K = val2024 + 273.15;
-                    return Math.round(((val2025K - val2024K) / val2024K) * 100 * 10) / 10;
+                    if (val2024 === 0) return 0;
+                    return Math.round(((val2025 - val2024) / val2024) * 100 * 10) / 10;
                 };
                 
                 return {
