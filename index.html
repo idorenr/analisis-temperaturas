@@ -15,18 +15,55 @@
     <script type="text/babel">
         const { useState, useEffect } = React;
 
-        // Comunas principales de la V región con sus coordenadas
+        // Comunas de la V región con sus coordenadas
         const COMUNAS = [
+            // Provincia de Valparaíso
             { nombre: "Valparaíso", lat: -33.0472, lon: -71.6127 },
             { nombre: "Viña del Mar", lat: -33.0246, lon: -71.5518 },
             { nombre: "Quilpué", lat: -33.0472, lon: -71.4425 },
             { nombre: "Villa Alemana", lat: -33.0453, lon: -71.3729 },
             { nombre: "Concón", lat: -32.9254, lon: -71.5203 },
             { nombre: "Quintero", lat: -32.7833, lon: -71.5333 },
+            { nombre: "Puchuncaví", lat: -32.7333, lon: -71.4167 },
             { nombre: "Casablanca", lat: -33.3167, lon: -71.4167 },
+            
+            // Provincia de San Antonio
             { nombre: "San Antonio", lat: -33.5953, lon: -71.6178 },
+            { nombre: "Cartagena", lat: -33.5533, lon: -71.6089 },
+            { nombre: "El Tabo", lat: -33.4500, lon: -71.6500 },
+            { nombre: "El Quisco", lat: -33.3950, lon: -71.6978 },
+            { nombre: "Algarrobo", lat: -33.3667, lon: -71.6667 },
+            { nombre: "Santo Domingo", lat: -33.6500, lon: -71.6167 },
+            
+            // Provincia de Quillota
             { nombre: "Quillota", lat: -32.8833, lon: -71.2500 },
-            { nombre: "La Calera", lat: -32.7833, lon: -71.2000 }
+            { nombre: "La Calera", lat: -32.7833, lon: -71.2000 },
+            { nombre: "La Cruz", lat: -32.8333, lon: -71.2333 },
+            { nombre: "Nogales", lat: -32.7333, lon: -71.2167 },
+            { nombre: "Hijuelas", lat: -32.8167, lon: -71.1667 },
+            { nombre: "Limache", lat: -33.0167, lon: -71.2667 },
+            { nombre: "Olmué", lat: -33.0100, lon: -71.2000 },
+            
+            // Provincia de Los Andes
+            { nombre: "Los Andes", lat: -32.8333, lon: -70.6000 },
+            { nombre: "San Esteban", lat: -32.7833, lon: -70.5833 },
+            { nombre: "Calle Larga", lat: -32.8667, lon: -70.6333 },
+            { nombre: "Rinconada", lat: -32.8333, lon: -70.7167 },
+            
+            // Provincia de San Felipe
+            { nombre: "San Felipe", lat: -32.7500, lon: -70.7333 },
+            { nombre: "Putaendo", lat: -32.6333, lon: -70.7167 },
+            { nombre: "Santa María", lat: -32.7500, lon: -70.6667 },
+            { nombre: "Panquehue", lat: -32.8167, lon: -70.8333 },
+            { nombre: "Llaillay", lat: -32.8333, lon: -70.9667 },
+            { nombre: "Catemu", lat: -32.7833, lon: -70.8833 },
+            
+            // Provincia de Petorca
+            { nombre: "La Ligua", lat: -32.4500, lon: -71.2333 },
+            { nombre: "Cabildo", lat: -32.4167, lon: -71.0833 },
+            { nombre: "Papudo", lat: -32.5167, lon: -71.4500 },
+            { nombre: "Zapallar", lat: -32.5500, lon: -71.4667 },
+            { nombre: "Petorca", lat: -32.2500, lon: -70.9333 }
         ];
 
         const TemperatureComparison = () => {
@@ -34,6 +71,75 @@
             const [loading, setLoading] = useState(true);
             const [error, setError] = useState(null);
             const [progress, setProgress] = useState(0);
+            const [dateRange, setDateRange] = useState({ start: '', end: '', label: '' });
+            const [selectedProvince, setSelectedProvince] = useState('Todas');
+
+            const provincias = ['Todas', 'Valparaíso', 'San Antonio', 'Quillota', 'Los Andes', 'San Felipe', 'Petorca'];
+            
+            const getComunaProvince = (comunaNombre) => {
+                const provinceMap = {
+                    'Valparaíso': ['Valparaíso', 'Viña del Mar', 'Quilpué', 'Villa Alemana', 'Concón', 'Quintero', 'Puchuncaví', 'Casablanca'],
+                    'San Antonio': ['San Antonio', 'Cartagena', 'El Tabo', 'El Quisco', 'Algarrobo', 'Santo Domingo'],
+                    'Quillota': ['Quillota', 'La Calera', 'La Cruz', 'Nogales', 'Hijuelas', 'Limache', 'Olmué'],
+                    'Los Andes': ['Los Andes', 'San Esteban', 'Calle Larga', 'Rinconada'],
+                    'San Felipe': ['San Felipe', 'Putaendo', 'Santa María', 'Panquehue', 'Llaillay', 'Catemu'],
+                    'Petorca': ['La Ligua', 'Cabildo', 'Papudo', 'Zapallar', 'Petorca']
+                };
+                
+                for (const [province, comunas] of Object.entries(provinceMap)) {
+                    if (comunas.includes(comunaNombre)) return province;
+                }
+                return 'Otras';
+            };
+
+            const filteredData = selectedProvince === 'Todas' 
+                ? data 
+                : data.filter(row => getComunaProvince(row.comuna) === selectedProvince);
+
+            // Función para obtener las fechas dinámicas
+            const getDateRanges = () => {
+                const today = new Date();
+                const currentYear = today.getFullYear();
+                const currentMonth = today.getMonth(); // 0-11
+                const currentDay = today.getDate();
+                
+                // Fecha de inicio: día 1 del mes actual
+                const startDate2025 = new Date(currentYear, currentMonth, 1);
+                // Fecha de fin: hoy
+                const endDate2025 = today;
+                
+                // Mismo periodo del año anterior
+                const startDate2024 = new Date(currentYear - 1, currentMonth, 1);
+                const endDate2024 = new Date(currentYear - 1, currentMonth, currentDay);
+                
+                // Formatear fechas a formato ISO (YYYY-MM-DD)
+                const formatDate = (date) => {
+                    const year = date.getFullYear();
+                    const month = String(date.getMonth() + 1).padStart(2, '0');
+                    const day = String(date.getDate()).padStart(2, '0');
+                    return `${year}-${month}-${day}`;
+                };
+                
+                // Nombres de meses en español
+                const monthNames = [
+                    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+                    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+                ];
+                
+                const label = `1-${currentDay} ${monthNames[currentMonth]} ${currentYear} vs ${currentYear - 1}`;
+                
+                return {
+                    current: {
+                        start: formatDate(startDate2025),
+                        end: formatDate(endDate2025)
+                    },
+                    previous: {
+                        start: formatDate(startDate2024),
+                        end: formatDate(endDate2024)
+                    },
+                    label: label
+                };
+            };
 
             useEffect(() => {
                 fetchAllData();
@@ -43,6 +149,10 @@
                 setLoading(true);
                 setError(null);
                 const results = [];
+                
+                // Obtener rangos de fechas dinámicos
+                const dates = getDateRanges();
+                setDateRange(dates);
 
                 for (let i = 0; i < COMUNAS.length; i++) {
                     const comuna = COMUNAS[i];
@@ -52,15 +162,15 @@
                         const data2025 = await fetchTemperatureData(
                             comuna.lat, 
                             comuna.lon, 
-                            "2025-11-01", 
-                            "2025-11-15"
+                            dates.current.start, 
+                            dates.current.end
                         );
                         
                         const data2024 = await fetchTemperatureData(
                             comuna.lat, 
                             comuna.lon, 
-                            "2024-11-01", 
-                            "2024-11-15"
+                            dates.previous.start, 
+                            dates.previous.end
                         );
 
                         results.push({
@@ -105,10 +215,36 @@
             };
 
             const calculateVariation = (data2025, data2024) => {
+                const max2025 = data2025.temperature_2m_max.reduce((a, b) => Math.max(a, b), -Infinity);
+                const max2024 = data2024.temperature_2m_max.reduce((a, b) => Math.max(a, b), -Infinity);
+                
+                const min2025 = data2025.temperature_2m_min.reduce((a, b) => Math.min(a, b), Infinity);
+                const min2024 = data2024.temperature_2m_min.reduce((a, b) => Math.min(a, b), Infinity);
+                
                 const mean2025 = data2025.temperature_2m_mean.reduce((a, b) => a + b, 0) / data2025.temperature_2m_mean.length;
                 const mean2024 = data2024.temperature_2m_mean.reduce((a, b) => a + b, 0) / data2024.temperature_2m_mean.length;
                 
-                return Math.round((mean2025 - mean2024) * 10) / 10;
+                const calcPercentage = (val2025, val2024) => {
+                    // Usamos la temperatura en Kelvin (sumando 273.15) para calcular el porcentaje correctamente
+                    const val2025K = val2025 + 273.15;
+                    const val2024K = val2024 + 273.15;
+                    return Math.round(((val2025K - val2024K) / val2024K) * 100 * 10) / 10;
+                };
+                
+                return {
+                    max: {
+                        abs: Math.round((max2025 - max2024) * 10) / 10,
+                        pct: calcPercentage(max2025, max2024)
+                    },
+                    min: {
+                        abs: Math.round((min2025 - min2024) * 10) / 10,
+                        pct: calcPercentage(min2025, min2024)
+                    },
+                    mean: {
+                        abs: Math.round((mean2025 - mean2024) * 10) / 10,
+                        pct: calcPercentage(mean2025, mean2024)
+                    }
+                };
             };
 
             const getVariationColor = (variation) => {
@@ -168,7 +304,7 @@
                                         🍦 Análisis de Temperaturas - V Región
                                     </h1>
                                     <p className="text-gray-600">
-                                        Comparación: 1-15 Noviembre 2025 vs 2024
+                                        Comparación: {dateRange.label || 'Cargando...'}
                                     </p>
                                 </div>
                                 <button
@@ -180,21 +316,52 @@
                             </div>
                         </div>
 
+                        {/* Filtro por Provincia */}
+                        <div className="bg-white rounded-lg shadow-lg p-4 mb-6">
+                            <div className="flex items-center gap-4 flex-wrap">
+                                <span className="font-semibold text-gray-700">📍 Filtrar por Provincia:</span>
+                                <div className="flex gap-2 flex-wrap">
+                                    {provincias.map(provincia => (
+                                        <button
+                                            key={provincia}
+                                            onClick={() => setSelectedProvince(provincia)}
+                                            className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                                                selectedProvince === provincia
+                                                    ? 'bg-gradient-to-r from-blue-500 to-orange-500 text-white shadow-md'
+                                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                            }`}
+                                        >
+                                            {provincia}
+                                        </button>
+                                    ))}
+                                </div>
+                                <span className="text-sm text-gray-500 ml-auto">
+                                    Mostrando: {filteredData.length} de {data.length} comunas
+                                </span>
+                            </div>
+                        </div>
+
                         {/* Insights Card */}
                         <div className="bg-gradient-to-r from-orange-100 to-yellow-100 rounded-lg shadow-lg p-6 mb-6">
                             <h2 className="text-xl font-bold text-gray-800 mb-3">💡 Insights para tu negocio</h2>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+                                <div className="bg-white rounded-lg p-4">
+                                    <div className="text-2xl font-bold text-purple-600">
+                                        {data.length}
+                                    </div>
+                                    <div className="text-sm text-gray-600">Comunas analizadas</div>
+                                </div>
                                 <div className="bg-white rounded-lg p-4">
                                     <div className="text-2xl font-bold text-orange-600">
-                                        {data.filter(d => d.variacion > 0).length}
+                                        {data.filter(d => d.variacion.mean.abs > 0).length}
                                     </div>
-                                    <div className="text-sm text-gray-600">Comunas más cálidas que 2024</div>
+                                    <div className="text-sm text-gray-600">Más cálidas que 2024 🔥</div>
                                 </div>
                                 <div className="bg-white rounded-lg p-4">
                                     <div className="text-2xl font-bold text-blue-600">
-                                        {data.filter(d => d.variacion < 0).length}
+                                        {data.filter(d => d.variacion.mean.abs < 0).length}
                                     </div>
-                                    <div className="text-sm text-gray-600">Comunas más frías que 2024</div>
+                                    <div className="text-sm text-gray-600">Más frías que 2024 ❄️</div>
                                 </div>
                                 <div className="bg-white rounded-lg p-4">
                                     <div className="text-2xl font-bold text-green-600">
@@ -203,9 +370,27 @@
                                             : '0°C'
                                         }
                                     </div>
-                                    <div className="text-sm text-gray-600">Temperatura máxima registrada</div>
+                                    <div className="text-sm text-gray-600">Temp. máxima registrada</div>
                                 </div>
                             </div>
+                            
+                            {/* Top 5 Comunas más cálidas */}
+                            {data.length > 0 && (
+                                <div className="bg-white rounded-lg p-4">
+                                    <h3 className="font-semibold text-gray-800 mb-2">🌡️ Top 5 Comunas más cálidas (promedio):</h3>
+                                    <div className="flex flex-wrap gap-2">
+                                        {[...data]
+                                            .sort((a, b) => b.actual.mean - a.actual.mean)
+                                            .slice(0, 5)
+                                            .map((d, i) => (
+                                                <span key={i} className="bg-orange-100 text-orange-800 px-3 py-1 rounded-full text-sm font-medium">
+                                                    {i + 1}. {d.comuna} ({d.actual.mean}°C)
+                                                </span>
+                                            ))
+                                        }
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
                         {/* Table */}
@@ -214,56 +399,80 @@
                                 <table className="w-full">
                                     <thead className="bg-gradient-to-r from-blue-600 to-orange-600 text-white">
                                         <tr>
-                                            <th className="px-6 py-4 text-left font-semibold">Comuna</th>
-                                            <th className="px-6 py-4 text-center font-semibold" colSpan="3">
-                                                Nov 2025 (Actual)
+                                            <th className="px-4 py-4 text-left font-semibold" rowSpan="2">Comuna</th>
+                                            <th className="px-4 py-3 text-center font-semibold" colSpan="2">
+                                                Temperatura Máxima
                                             </th>
-                                            <th className="px-6 py-4 text-center font-semibold" colSpan="3">
-                                                Nov 2024 (Anterior)
+                                            <th className="px-4 py-3 text-center font-semibold" colSpan="2">
+                                                Temperatura Mínima
                                             </th>
-                                            <th className="px-6 py-4 text-center font-semibold">Variación</th>
+                                            <th className="px-4 py-3 text-center font-semibold" colSpan="2">
+                                                Temperatura Promedio
+                                            </th>
                                         </tr>
                                         <tr className="bg-blue-700">
-                                            <th className="px-6 py-3 text-left text-sm"></th>
-                                            <th className="px-6 py-3 text-center text-sm">Máx</th>
-                                            <th className="px-6 py-3 text-center text-sm">Mín</th>
-                                            <th className="px-6 py-3 text-center text-sm">Prom</th>
-                                            <th className="px-6 py-3 text-center text-sm">Máx</th>
-                                            <th className="px-6 py-3 text-center text-sm">Mín</th>
-                                            <th className="px-6 py-3 text-center text-sm">Prom</th>
-                                            <th className="px-6 py-3 text-center text-sm">°C</th>
+                                            <th className="px-4 py-3 text-center text-sm">2025 / 2024</th>
+                                            <th className="px-4 py-3 text-center text-sm">Variación</th>
+                                            <th className="px-4 py-3 text-center text-sm">2025 / 2024</th>
+                                            <th className="px-4 py-3 text-center text-sm">Variación</th>
+                                            <th className="px-4 py-3 text-center text-sm">2025 / 2024</th>
+                                            <th className="px-4 py-3 text-center text-sm">Variación</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {data.map((row, index) => (
+                                        {filteredData.map((row, index) => (
                                             <tr 
                                                 key={index}
-                                                className={`border-b border-gray-200 hover:bg-gray-50 transition-colors ${getVariationBg(row.variacion)}`}
+                                                className={`border-b border-gray-200 hover:bg-gray-50 transition-colors ${getVariationBg(row.variacion.mean.abs)}`}
                                             >
-                                                <td className="px-6 py-4 font-semibold text-gray-800">
-                                                    {row.comuna}
+                                                <td className="px-4 py-4 font-semibold text-gray-800">
+                                                    <div>{row.comuna}</div>
+                                                    <div className="text-xs text-gray-500 font-normal">
+                                                        {getComunaProvince(row.comuna)}
+                                                    </div>
                                                 </td>
-                                                <td className="px-6 py-4 text-center text-red-600 font-semibold">
-                                                    {row.actual.max}°
+                                                
+                                                {/* Temperatura Máxima */}
+                                                <td className="px-4 py-4 text-center">
+                                                    <div className="font-semibold text-red-600">{row.actual.max}°</div>
+                                                    <div className="text-xs text-gray-500">{row.anterior.max}°</div>
                                                 </td>
-                                                <td className="px-6 py-4 text-center text-blue-600 font-semibold">
-                                                    {row.actual.min}°
+                                                <td className={`px-4 py-4 text-center ${getVariationColor(row.variacion.max.abs)}`}>
+                                                    <div className="font-bold">
+                                                        {row.variacion.max.abs > 0 ? '+' : ''}{row.variacion.max.abs}°
+                                                    </div>
+                                                    <div className="text-xs">
+                                                        ({row.variacion.max.pct > 0 ? '+' : ''}{row.variacion.max.pct}%)
+                                                    </div>
                                                 </td>
-                                                <td className="px-6 py-4 text-center font-semibold">
-                                                    {row.actual.mean}°
+                                                
+                                                {/* Temperatura Mínima */}
+                                                <td className="px-4 py-4 text-center">
+                                                    <div className="font-semibold text-blue-600">{row.actual.min}°</div>
+                                                    <div className="text-xs text-gray-500">{row.anterior.min}°</div>
                                                 </td>
-                                                <td className="px-6 py-4 text-center text-gray-600">
-                                                    {row.anterior.max}°
+                                                <td className={`px-4 py-4 text-center ${getVariationColor(row.variacion.min.abs)}`}>
+                                                    <div className="font-bold">
+                                                        {row.variacion.min.abs > 0 ? '+' : ''}{row.variacion.min.abs}°
+                                                    </div>
+                                                    <div className="text-xs">
+                                                        ({row.variacion.min.pct > 0 ? '+' : ''}{row.variacion.min.pct}%)
+                                                    </div>
                                                 </td>
-                                                <td className="px-6 py-4 text-center text-gray-600">
-                                                    {row.anterior.min}°
+                                                
+                                                {/* Temperatura Promedio */}
+                                                <td className="px-4 py-4 text-center">
+                                                    <div className="font-semibold text-gray-800">{row.actual.mean}°</div>
+                                                    <div className="text-xs text-gray-500">{row.anterior.mean}°</div>
                                                 </td>
-                                                <td className="px-6 py-4 text-center text-gray-600">
-                                                    {row.anterior.mean}°
-                                                </td>
-                                                <td className={`px-6 py-4 text-center font-bold ${getVariationColor(row.variacion)}`}>
-                                                    {row.variacion > 0 ? '+' : ''}{row.variacion}°
-                                                    {row.variacion > 0 ? ' 🔥' : row.variacion < 0 ? ' ❄️' : ' ➡️'}
+                                                <td className={`px-4 py-4 text-center ${getVariationColor(row.variacion.mean.abs)}`}>
+                                                    <div className="font-bold">
+                                                        {row.variacion.mean.abs > 0 ? '+' : ''}{row.variacion.mean.abs}°
+                                                        {row.variacion.mean.abs > 0 ? ' 🔥' : row.variacion.mean.abs < 0 ? ' ❄️' : ' ➡️'}
+                                                    </div>
+                                                    <div className="text-xs">
+                                                        ({row.variacion.mean.pct > 0 ? '+' : ''}{row.variacion.mean.pct}%)
+                                                    </div>
                                                 </td>
                                             </tr>
                                         ))}
@@ -290,7 +499,7 @@
                                 </div>
                             </div>
                             <p className="text-xs text-gray-500 mt-4">
-                                Datos obtenidos de Open-Meteo API • Periodo: 1-15 Noviembre • Actualizado: {new Date().toLocaleDateString('es-CL')}
+                                Datos obtenidos de Open-Meteo API • 38 comunas de la V región • Periodo: {dateRange.label || 'Cargando...'} • Actualizado: {new Date().toLocaleDateString('es-CL', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                             </p>
                         </div>
                     </div>
