@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Análisis de Temperaturas - V Región</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+    <div id="root"></div>
+    
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // Comunas principales de la V región con sus coordenadas
+        const COMUNAS = [
+            { nombre: "Valparaíso", lat: -33.0472, lon: -71.6127 },
+            { nombre: "Viña del Mar", lat: -33.0246, lon: -71.5518 },
+            { nombre: "Quilpué", lat: -33.0472, lon: -71.4425 },
+            { nombre: "Villa Alemana", lat: -33.0453, lon: -71.3729 },
+            { nombre: "Concón", lat: -32.9254, lon: -71.5203 },
+            { nombre: "Quintero", lat: -32.7833, lon: -71.5333 },
+            { nombre: "Casablanca", lat: -33.3167, lon: -71.4167 },
+            { nombre: "San Antonio", lat: -33.5953, lon: -71.6178 },
+            { nombre: "Quillota", lat: -32.8833, lon: -71.2500 },
+            { nombre: "La Calera", lat: -32.7833, lon: -71.2000 }
+        ];
+
+        const TemperatureComparison = () => {
+            const [data, setData] = useState([]);
+            const [loading, setLoading] = useState(true);
+            const [error, setError] = useState(null);
+            const [progress, setProgress] = useState(0);
+
+            useEffect(() => {
+                fetchAllData();
+            }, []);
+
+            const fetchAllData = async () => {
+                setLoading(true);
+                setError(null);
+                const results = [];
+
+                for (let i = 0; i < COMUNAS.length; i++) {
+                    const comuna = COMUNAS[i];
+                    setProgress(Math.round(((i + 1) / COMUNAS.length) * 100));
+                    
+                    try {
+                        const data2025 = await fetchTemperatureData(
+                            comuna.lat, 
+                            comuna.lon, 
+                            "2025-11-01", 
+                            "2025-11-15"
+                        );
+                        
+                        const data2024 = await fetchTemperatureData(
+                            comuna.lat, 
+                            comuna.lon, 
+                            "2024-11-01", 
+                            "2024-11-15"
+                        );
+
+                        results.push({
+                            comuna: comuna.nombre,
+                            actual: calculateStats(data2025),
+                            anterior: calculateStats(data2024),
+                            variacion: calculateVariation(data2025, data2024)
+                        });
+                    } catch (err) {
+                        console.error(`Error fetching data for ${comuna.nombre}:`, err);
+                    }
+                }
+
+                setData(results);
+                setLoading(false);
+            };
+
+            const fetchTemperatureData = async (lat, lon, startDate, endDate) => {
+                const url = `https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=${startDate}&end_date=${endDate}&daily=temperature_2m_max,temperature_2m_min,temperature_2m_mean&timezone=America/Santiago`;
+                
+                const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error('Error fetching data');
+                }
+                
+                const data = await response.json();
+                return data.daily;
+            };
+
+            const calculateStats = (dailyData) => {
+                if (!dailyData) return { max: 0, min: 0, mean: 0 };
+
+                const maxTemps = dailyData.temperature_2m_max;
+                const minTemps = dailyData.temperature_2m_min;
+                const meanTemps = dailyData.temperature_2m_mean;
+
+                return {
+                    max: Math.round(maxTemps.reduce((a, b) => Math.max(a, b), -Infinity) * 10) / 10,
+                    min: Math.round(minTemps.reduce((a, b) => Math.min(a, b), Infinity) * 10) / 10,
+                    mean: Math.round((meanTemps.reduce((a, b) => a + b, 0) / meanTemps.length) * 10) / 10
+                };
+            };
+
+            const calculateVariation = (data2025, data2024) => {
+                const mean2025 = data2025.temperature_2m_mean.reduce((a, b) => a + b, 0) / data2025.temperature_2m_mean.length;
+                const mean2024 = data2024.temperature_2m_mean.reduce((a, b) => a + b, 0) / data2024.temperature_2m_mean.length;
+                
+                return Math.round((mean2025 - mean2024) * 10) / 10;
+            };
+
+            const getVariationColor = (variation) => {
+                if (variation > 0) return 'text-red-600';
+                if (variation < 0) return 'text-blue-600';
+                return 'text-gray-600';
+            };
+
+            const getVariationBg = (variation) => {
+                if (variation > 1) return 'bg-red-50';
+                if (variation < -1) return 'bg-blue-50';
+                return 'bg-white';
+            };
+
+            if (loading) {
+                return (
+                    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-orange-50 flex items-center justify-center p-4">
+                        <div className="bg-white rounded-lg shadow-xl p-8 max-w-md w-full">
+                            <div className="text-center">
+                                <div className="text-4xl mb-4">🍦</div>
+                                <h2 className="text-2xl font-bold text-gray-800 mb-4">
+                                    Cargando datos climáticos...
+                                </h2>
+                                <div className="w-full bg-gray-200 rounded-full h-4 mb-2">
+                                    <div 
+                                        className="bg-gradient-to-r from-blue-500 to-orange-500 h-4 rounded-full transition-all duration-300"
+                                        style={{ width: `${progress}%` }}
+                                    ></div>
+                                </div>
+                                <p className="text-gray-600">{progress}% completado</p>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            if (error) {
+                return (
+                    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-orange-50 flex items-center justify-center p-4">
+                        <div className="bg-white rounded-lg shadow-xl p-8 max-w-md w-full text-center">
+                            <div className="text-4xl mb-4">⚠️</div>
+                            <h2 className="text-2xl font-bold text-gray-800 mb-4">Error</h2>
+                            <p className="text-gray-600">{error}</p>
+                        </div>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="min-h-screen bg-gradient-to-br from-blue-50 to-orange-50 p-4 md:p-8">
+                    <div className="max-w-7xl mx-auto">
+                        {/* Header */}
+                        <div className="bg-white rounded-lg shadow-xl p-6 mb-6">
+                            <div className="flex items-center justify-between flex-wrap gap-4">
+                                <div>
+                                    <h1 className="text-3xl font-bold text-gray-800 mb-2 flex items-center gap-2">
+                                        🍦 Análisis de Temperaturas - V Región
+                                    </h1>
+                                    <p className="text-gray-600">
+                                        Comparación: 1-15 Noviembre 2025 vs 2024
+                                    </p>
+                                </div>
+                                <button
+                                    onClick={fetchAllData}
+                                    className="bg-gradient-to-r from-blue-500 to-orange-500 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all duration-300"
+                                >
+                                    🔄 Actualizar Datos
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Insights Card */}
+                        <div className="bg-gradient-to-r from-orange-100 to-yellow-100 rounded-lg shadow-lg p-6 mb-6">
+                            <h2 className="text-xl font-bold text-gray-800 mb-3">💡 Insights para tu negocio</h2>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div className="bg-white rounded-lg p-4">
+                                    <div className="text-2xl font-bold text-orange-600">
+                                        {data.filter(d => d.variacion > 0).length}
+                                    </div>
+                                    <div className="text-sm text-gray-600">Comunas más cálidas que 2024</div>
+                                </div>
+                                <div className="bg-white rounded-lg p-4">
+                                    <div className="text-2xl font-bold text-blue-600">
+                                        {data.filter(d => d.variacion < 0).length}
+                                    </div>
+                                    <div className="text-sm text-gray-600">Comunas más frías que 2024</div>
+                                </div>
+                                <div className="bg-white rounded-lg p-4">
+                                    <div className="text-2xl font-bold text-green-600">
+                                        {data.length > 0 ? 
+                                            data.reduce((max, d) => d.actual.max > max ? d.actual.max : max, 0) + '°C'
+                                            : '0°C'
+                                        }
+                                    </div>
+                                    <div className="text-sm text-gray-600">Temperatura máxima registrada</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Table */}
+                        <div className="bg-white rounded-lg shadow-xl overflow-hidden">
+                            <div className="overflow-x-auto">
+                                <table className="w-full">
+                                    <thead className="bg-gradient-to-r from-blue-600 to-orange-600 text-white">
+                                        <tr>
+                                            <th className="px-6 py-4 text-left font-semibold">Comuna</th>
+                                            <th className="px-6 py-4 text-center font-semibold" colSpan="3">
+                                                Nov 2025 (Actual)
+                                            </th>
+                                            <th className="px-6 py-4 text-center font-semibold" colSpan="3">
+                                                Nov 2024 (Anterior)
+                                            </th>
+                                            <th className="px-6 py-4 text-center font-semibold">Variación</th>
+                                        </tr>
+                                        <tr className="bg-blue-700">
+                                            <th className="px-6 py-3 text-left text-sm"></th>
+                                            <th className="px-6 py-3 text-center text-sm">Máx</th>
+                                            <th className="px-6 py-3 text-center text-sm">Mín</th>
+                                            <th className="px-6 py-3 text-center text-sm">Prom</th>
+                                            <th className="px-6 py-3 text-center text-sm">Máx</th>
+                                            <th className="px-6 py-3 text-center text-sm">Mín</th>
+                                            <th className="px-6 py-3 text-center text-sm">Prom</th>
+                                            <th className="px-6 py-3 text-center text-sm">°C</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {data.map((row, index) => (
+                                            <tr 
+                                                key={index}
+                                                className={`border-b border-gray-200 hover:bg-gray-50 transition-colors ${getVariationBg(row.variacion)}`}
+                                            >
+                                                <td className="px-6 py-4 font-semibold text-gray-800">
+                                                    {row.comuna}
+                                                </td>
+                                                <td className="px-6 py-4 text-center text-red-600 font-semibold">
+                                                    {row.actual.max}°
+                                                </td>
+                                                <td className="px-6 py-4 text-center text-blue-600 font-semibold">
+                                                    {row.actual.min}°
+                                                </td>
+                                                <td className="px-6 py-4 text-center font-semibold">
+                                                    {row.actual.mean}°
+                                                </td>
+                                                <td className="px-6 py-4 text-center text-gray-600">
+                                                    {row.anterior.max}°
+                                                </td>
+                                                <td className="px-6 py-4 text-center text-gray-600">
+                                                    {row.anterior.min}°
+                                                </td>
+                                                <td className="px-6 py-4 text-center text-gray-600">
+                                                    {row.anterior.mean}°
+                                                </td>
+                                                <td className={`px-6 py-4 text-center font-bold ${getVariationColor(row.variacion)}`}>
+                                                    {row.variacion > 0 ? '+' : ''}{row.variacion}°
+                                                    {row.variacion > 0 ? ' 🔥' : row.variacion < 0 ? ' ❄️' : ' ➡️'}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        {/* Legend */}
+                        <div className="mt-6 bg-white rounded-lg shadow-lg p-6">
+                            <h3 className="font-semibold text-gray-800 mb-3">📊 Leyenda</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-4 h-4 bg-red-50 border border-red-200 rounded"></div>
+                                    <span>Más cálido que 2024 (más de +1°C)</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <div className="w-4 h-4 bg-blue-50 border border-blue-200 rounded"></div>
+                                    <span>Más frío que 2024 (menos de -1°C)</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <div className="w-4 h-4 bg-white border border-gray-200 rounded"></div>
+                                    <span>Similar a 2024 (-1°C a +1°C)</span>
+                                </div>
+                            </div>
+                            <p className="text-xs text-gray-500 mt-4">
+                                Datos obtenidos de Open-Meteo API • Periodo: 1-15 Noviembre • Actualizado: {new Date().toLocaleDateString('es-CL')}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        ReactDOM.render(<TemperatureComparison />, document.getElementById('root'));
+    </script>
+</body>
+</html>
