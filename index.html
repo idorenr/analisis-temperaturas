@@ -178,13 +178,29 @@
                 return 'Otras';
             };
 
+            // Organizar datos: comunas DIMER primero, luego otras
+            const organizedData = [...data].sort((a, b) => {
+                const aIsDimer = COMUNAS_DIMER.includes(a.comuna);
+                const bIsDimer = COMUNAS_DIMER.includes(b.comuna);
+                
+                if (aIsDimer && !bIsDimer) return -1;
+                if (!aIsDimer && bIsDimer) return 1;
+                
+                // Dentro de DIMER, mantener el orden definido en COMUNAS_DIMER
+                if (aIsDimer && bIsDimer) {
+                    return COMUNAS_DIMER.indexOf(a.comuna) - COMUNAS_DIMER.indexOf(b.comuna);
+                }
+                
+                return a.comuna.localeCompare(b.comuna);
+            });
+
             const filteredData = selectedProvince === 'Todas' 
-                ? data 
+                ? organizedData 
                 : selectedProvince === 'DIMER'
-                ? data.filter(row => COMUNAS_DIMER.includes(row.comuna))
+                ? organizedData.filter(row => COMUNAS_DIMER.includes(row.comuna))
                 : selectedProvince === 'Otras'
-                ? data.filter(row => !COMUNAS_DIMER.includes(row.comuna))
-                : data.filter(row => getComunaProvince(row.comuna) === selectedProvince);
+                ? organizedData.filter(row => !COMUNAS_DIMER.includes(row.comuna))
+                : organizedData.filter(row => getComunaProvince(row.comuna) === selectedProvince);
 
             // Formatear venta neta
             const formatVentaNeta = (num) => {
@@ -289,22 +305,6 @@
                     }
                 };
             };
-
-            // Organizar datos: comunas DIMER primero, luego otras
-            const organizedData = [...data].sort((a, b) => {
-                const aIsDimer = COMUNAS_DIMER.includes(a.comuna);
-                const bIsDimer = COMUNAS_DIMER.includes(b.comuna);
-                
-                if (aIsDimer && !bIsDimer) return -1;
-                if (!aIsDimer && bIsDimer) return 1;
-                
-                // Dentro de DIMER, mantener el orden original
-                if (aIsDimer && bIsDimer) {
-                    return COMUNAS_DIMER.indexOf(a.comuna) - COMUNAS_DIMER.indexOf(b.comuna);
-                }
-                
-                return a.comuna.localeCompare(b.comuna);
-            });
 
             // Función para obtener las fechas dinámicas
             const getDateRanges = () => {
